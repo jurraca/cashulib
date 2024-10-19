@@ -5,7 +5,7 @@ defmodule Cashu.MixProject do
     [
       app: :cashu,
       version: "0.1.0",
-      elixir: "~> 1.13",
+      elixir: "~> 1.16",
       start_permanent: Mix.env() == :prod,
       deps: deps()
     ]
@@ -22,7 +22,8 @@ defmodule Cashu.MixProject do
   defp deps do
     [
       {:bitcoinex, "~> 0.1.7"},
-      {:jason, "~> 1.4.1"}
+      {:jason, "~> 1.4.1"},
+      {:cbor, "~> 1.0.1"}
     ]
   end
 end
