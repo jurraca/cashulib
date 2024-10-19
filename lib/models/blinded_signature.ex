@@ -3,47 +3,42 @@ defmodule Cashu.BlindedSignature do
   NUT-00: BlindedSignature
   A BlindedSignature is sent from Bob to Alice after minting tokens or after swapping tokens. A BlindedSignature is also called a promise.
   """
-  alias Cashu.{BaseParser, BDHKE, Error, Validator}
+  alias Cashu.{BDHKE, Validator}
   alias Bitcoinex.Secp256k1.Point
 
-  @behaviour Cashu.Serde
-
   @derive Jason.Encoder
-  defstruct [:amount, :id, :c_]
+  defstruct id: nil, amount: 0, c_prime: nil
 
-  @type t :: %__MODULE__{
-          amount: pos_integer(),
-          id: String.t(),
-          c_: String.t()
-        }
+  @type t :: %{
+    id: String.t(),
+    amount: pos_integer(),
+    c_prime: binary()
+  }
 
-  def new(blinded_message, mint_privkey) do
+  def new(), do: %__MODULE__{}
+  def new(params) when is_list(params), do: struct!(__MODULE__, params)
+  def new(params) when is_map(params), do: Map.to_list(params) |> new()
+
+  def new(blinded_message, keyset_id, mint_privkey) do
     case BDHKE.sign_blinded_point(blinded_message, mint_privkey) do
-      {:ok, commitment_point, e, s} ->
-        # id = get_keyset_id()
+      {:ok, commitment_point, _e, _s} ->
         hex_c_ = Point.serialize_public_key(commitment_point)
-        %__MODULE__{amount: blinded_message.amount, id: nil, c_: hex_c_}
+        new(%{amount: blinded_message.amount, id: keyset_id, c_: hex_c_})
 
       {:error, reason} ->
-        Error.new(reason)
+        {:error, reason}
     end
   end
 
-  def validate(%__MODULE__{amount: amount, id: id, c_: c_} = sig) do
+  def validate(%__MODULE__{amount: amount, id: id, c_prime: c_} = sig) do
     with {:ok, _} <- Validator.validate_amount(amount),
          {:ok, _} <- Validator.validate_id(id),
          {:ok, _} <- Validator.validate_c_(c_) do
       {:ok, sig}
     else
-      {:error, reason} -> Error.new(reason)
+      {:error, reason} -> {:error, reason}
     end
   end
 
   def validate_sig_list(list), do: Validator.validate_list(list, &validate/1)
-
-  @impl Cashu.Serde
-  def serialize(sig), do: BaseParser.serialize(sig)
-
-  @impl Cashu.Serde
-  def deserialize(binary), do: BaseParser.deserialize(binary, %__MODULE__{})
 end
