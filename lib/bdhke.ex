@@ -6,14 +6,15 @@ defmodule Cashu.BDHKE do
   alias Bitcoinex.Secp256k1.{Math, Params, Point, PrivateKey}
 
   @n Params.curve().n
-
   @max_privkey @n - 1
+
+  @domain_separator "Secp256k1_HashToCurve_Cashu_"
 
   @doc """
   Map a hash to the Secp256k1 elliptic curve.
   """
   def hash_to_curve(msg) do
-    hash = sha256_hash(msg)
+    hash = sha256_hash(@domain_separator <> msg)
     x = "02" <> Base.encode16(hash, case: :lower)
     iterate_to_valid_point(x)
   end
