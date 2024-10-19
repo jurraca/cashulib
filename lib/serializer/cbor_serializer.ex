@@ -51,8 +51,28 @@ defmodule Cashu.Serializer.V4 do
 
   defp decode_cbor(str) do
     case CBOR.decode(str) do
-      {:ok, bin, ""} -> Jason.decode(bin)
-      {:error, reason} -> {:error, reason}
+      {:ok, output, ""} ->
+        new_out = Map.update!(output, "t", &handle_cbor_tags(&1))
+        {:ok, new_out}
+
+      {:error, reason} ->
+        {:error, reason}
     end
   end
+
+  defp handle_cbor_tags(tokens) do
+    Enum.map(tokens, fn %{"i" => i, "p" => p} ->
+      new_i = maybe_handle_tag(i)
+
+      new_p =
+        Enum.map(p, fn proof ->
+          Map.update!(proof, "c", &maybe_handle_tag(&1))
+        end)
+
+      %{"i" => new_i, "p" => new_p}
+    end)
+  end
+
+  defp maybe_handle_tag(%CBOR.Tag{} = data), do: data.value
+  defp maybe_handle_tag(data), do: data
 end
