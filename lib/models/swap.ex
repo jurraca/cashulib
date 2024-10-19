@@ -1,18 +1,19 @@
 defmodule Cashu.Swap do
-  alias Cashu.{BlindedMessage, BlindedSignature, Proof}
-
   defmodule Request do
     @moduledoc """
     Request swap tokens
     """
-    defstruct [:inputs, :outputs]
+   alias Cashu.{BlindedMessage, ProofV3, ProofV4}
+   @derive Jason.Encoder
+
+   defstruct inputs: [], outputs: []
 
     @type t :: %{
-      inputs: [Proofs.t()],
-      outputs: [BlindedMessage.t()]
-    }
+            inputs: [ProofV3.t()] | [ProofV4.t()],
+            outputs: [BlindedMessage.t()]
+          }
 
-    def new(inputs, outputs) do
+    def new(inputs, outputs) when is_list(inputs) and is_list(outputs) do
       %__MODULE__{
         inputs: inputs,
         outputs: outputs
@@ -20,8 +21,8 @@ defmodule Cashu.Swap do
     end
 
     def validate(%{inputs: inputs, outputs: outputs} = swap_req) do
-      with %{errors: []} <- Proof.validate_proof_list(inputs),
-           %{errors: []} <- BlindedMessage.validate_bm_list(outputs) do
+      with {:error, []} <- ProofV3.validate_proof_list(inputs),
+           {:error, []} <- BlindedMessage.validate_bm_list(outputs) do
         {:ok, swap_req}
       end
     end
@@ -31,10 +32,14 @@ defmodule Cashu.Swap do
     @moduledoc """
     Swap Response: mint responds with blind signatures on the previously provided tokens.
     """
-    defstruct [:signatures]
-
     alias Cashu.BlindedSignature
-    @type t :: %{signatures: [BlindedSignature.t()]}
+
+    @derive Jason.Encoder
+    defstruct signatures: []
+
+    @type t :: %{
+            signatures: [BlindedSignature.t()]
+          }
 
     def new(signatures) do
       %__MODULE__{
