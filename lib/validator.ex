@@ -46,7 +46,8 @@ defmodule Cashu.Validator do
     end
   end
 
-  def validate_keyset_id(keyset_id), do: {:error, "Invalid Keyset ID version prefix, got: #{keyset_id}"}
+  def validate_keyset_id(keyset_id),
+    do: {:error, "Invalid Keyset ID version prefix, got: #{keyset_id}"}
 
   @doc """
   Validate a list of structs and collect the results into a map of ok/error tuples.
@@ -68,5 +69,4 @@ defmodule Cashu.Validator do
     new_list = [value | acc_val]
     Map.put(acc, key, new_list)
   end
-
 end

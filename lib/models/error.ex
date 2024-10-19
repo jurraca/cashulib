@@ -3,14 +3,15 @@ defmodule Cashu.Error do
   The Cashu error interface. Code meanings tbd.
   """
 
+  @derive Jason.Encoder
   defstruct [:detail, :code]
+
   @typedoc "A Cashu error response"
-  @type t() :: %__MODULE__{
+  @type t() :: %{
           detail: String.t(),
           code: non_neg_integer()
         }
 
-  @spec new(String.t()) :: t()
   def new(reason) when is_binary(reason) do
     # get_error_code(error)
     {:error, %__MODULE__{detail: reason, code: 0}}
