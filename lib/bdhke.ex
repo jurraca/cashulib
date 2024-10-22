@@ -40,10 +40,13 @@ defmodule Cashu.BDHKE do
   end
 
   def blind_point(secret_msg, blinding_factor) do
-    {:ok, point} = hash_to_curve(secret_msg)
-    blinding_point = PrivateKey.to_point(blinding_factor)
-    blinded_point = Math.add(point, blinding_point)
-    {:ok, blinded_point, blinding_factor.d}
+    case hash_to_curve(secret_msg) do
+        {:ok, point} ->
+          blinding_point = PrivateKey.to_point(blinding_factor)
+          blinded_point = Math.add(point, blinding_point)
+          {:ok, blinded_point, blinding_factor.d}
+        {:error, _ } = err -> err
+     end
   end
 
   @doc """
