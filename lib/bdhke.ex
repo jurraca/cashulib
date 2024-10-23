@@ -13,21 +13,26 @@ defmodule Cashu.BDHKE do
   @doc """
   Map a hash to the Secp256k1 elliptic curve.
   """
-  def hash_to_curve(msg) do
-    hash = sha256_hash(@domain_separator <> msg)
-    x = "02" <> Base.encode16(hash, case: :lower)
-    iterate_to_valid_point(x)
+  def hash_to_curve(msg, separator \\ @domain_separator) do
+    sha256_hash(separator <> msg)
+    |> iterate_to_valid_point()
   end
 
-  defp iterate_to_valid_point(x) do
+  defp iterate_to_valid_point(hash, counter \\ 0)
+
+  defp iterate_to_valid_point(hash, counter) when counter < 65_536 do
+    x = sha256_hash(hash <> <<counter::little-32>>)
+
     case Secp256k1.get_y(x, false) do
       {:error, "invalid sq root"} ->
-        iterate_to_valid_point(sha256_hash(x))
+        hash |> iterate_to_valid_point(counter + 1)
 
       {:ok, y} ->
         {:ok, %Point{x: :binary.decode_unsigned(x), y: y}}
     end
   end
+
+  defp iterate_to_valid_point(_x, _counter), do: {:error, "no valid point found"}
 
   @doc """
   In the first step of the exchange, Alice has a secret message, and a secret number to blind this message.
@@ -41,12 +46,14 @@ defmodule Cashu.BDHKE do
 
   def blind_point(secret_msg, blinding_factor) do
     case hash_to_curve(secret_msg) do
-        {:ok, point} ->
-          blinding_point = PrivateKey.to_point(blinding_factor)
-          blinded_point = Math.add(point, blinding_point)
-          {:ok, blinded_point, blinding_factor.d}
-        {:error, _ } = err -> err
-     end
+      {:ok, point} ->
+        blinding_point = PrivateKey.to_point(blinding_factor)
+        blinded_point = Math.add(point, blinding_point)
+        {:ok, blinded_point, blinding_factor.d}
+
+      {:error, _} = err ->
+        err
+    end
   end
 
   @doc """

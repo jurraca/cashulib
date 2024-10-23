@@ -63,6 +63,26 @@ defmodule BDHKETest do
     ]
   end
 
+  describe "hash_to_curve function tests" do
+    test "0x00" do
+      {:ok, secret_msg} = "0000000000000000000000000000000000000000000000000000000000000000" |> Base.decode16()
+      {:ok, %Point{} = point} = BDHKE.hash_to_curve(secret_msg)
+      assert Point.serialize_public_key(point)  == "024cce997d3b518f739663b757deaec95bcd9473c30a14ac2fd04023a739d1a725"
+    end
+
+    test "0x01" do
+      {:ok, secret_msg} = "0000000000000000000000000000000000000000000000000000000000000001" |> Base.decode16()
+      {:ok, %Point{} = point} = BDHKE.hash_to_curve(secret_msg)
+      assert Point.serialize_public_key(point)  == "022e7158e11c9506f1aa4248bf531298daa7febd6194f003edcd9b93ade6253acf"
+    end
+
+    test "0x02" do
+      {:ok, secret_msg} = "0000000000000000000000000000000000000000000000000000000000000002" |> Base.decode16()
+      {:ok, %Point{} = point} = BDHKE.hash_to_curve(secret_msg)
+      assert Point.serialize_public_key(point)  == "026cdbe15362df59cd1dd3c9c11de8aedac2106eca69236ecd9fbe117af897be4f"
+    end
+  end
+
   describe "Blind DH Key exchange" do
     test "hash a message to the curve", context do
       {:ok, %Point{} = point} = BDHKE.hash_to_curve(context[:secret_msg])
