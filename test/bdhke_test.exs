@@ -4,6 +4,13 @@ defmodule BDHKETest do
   alias Bitcoinex.Secp256k1.{Math, Point, PrivateKey}
   alias Cashu.BDHKE
 
+  def encode_unsigned(number) do
+    number
+    |> :binary.encode_unsigned()
+    |> Bitcoinex.Utils.pad(32, :leading)
+    |> Base.encode16(case: :lower)
+  end
+
   describe "hash_to_curve function tests" do
     test "0x00" do
       {:ok, secret_msg} =
@@ -119,6 +126,58 @@ defmodule BDHKETest do
 
       assert hash |> Base.encode16(case: :lower) ==
                "a4dc034b74338c28c6bc3ea49731f2a24440fc7c4affc08b31a93fc9fbe6401e"
+    end
+
+    test "Bob create DLEQ", state do
+      {:ok, b_, _} = BDHKE.blind_point(state[:secret_msg], state[:alice_private_key])
+
+      a = state[:bob_private_key]
+      # using alice_private_key as it has the same value as the reference implementation.
+      p_bytes = state[:alice_private_key]
+
+      {:ok, e, s} = BDHKE.mint_create_dleq(b_, a, p_bytes)
+
+      assert e |> encode_unsigned() ==
+               "a608ae30a54c6d878c706240ee35d4289b68cfe99454bbfa6578b503bce2dbe1"
+
+      assert s |> encode_unsigned() ==
+               "a608ae30a54c6d878c706240ee35d4289b68cfe99454bbfa6578b503bce2dbe2"
+
+      # change `a`
+      {pk, _} =
+        Integer.parse("0000000000000000000000000000000000000000000000000000000000001111", 16)
+      {:ok, a} = PrivateKey.new(pk)
+
+      {:ok, e, s} = BDHKE.mint_create_dleq(b_, a, p_bytes)
+
+      assert e |> encode_unsigned() ==
+        "076cbdda4f368053c33056c438df014d1875eb3c8b28120bece74b6d0e6381bb"
+
+      assert s |> encode_unsigned() ==
+        "b6d41ac1e12415862bf8cace95e5355e9262eab8a11d201dadd3b6e41584ea6e"
+    end
+
+    test "Alice direct verify DLEQ", state do
+      a = PrivateKey.to_point(state[:bob_private_key])
+      {:ok, b_, _} = BDHKE.blind_point(state[:secret_msg], state[:alice_private_key])
+      {:ok, c_, e, s} = BDHKE.sign_blinded_point(b_, state[:bob_private_key])
+
+      assert BDHKE.verify_dleq(b_, c_, e, s, a)
+    end
+
+    test "Bob verify unblinded signature is valid", state do
+      a = PrivateKey.to_point(state[:bob_private_key])
+      assert a |> Point.serialize_public_key() == "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798"
+
+      {:ok, b_, _} = BDHKE.blind_point(state[:secret_msg], state[:alice_private_key])
+      {:ok, c_, e, s} = BDHKE.sign_blinded_point(b_, state[:bob_private_key])
+      assert BDHKE.verify_dleq(b_, c_, e, s, a)
+
+      r = state[:alice_private_key].d
+      {:ok, c} = BDHKE.generate_proof(c_, r, a)
+
+      #Bob check the sent proof with the secret msg
+      assert BDHKE.is_valid?(state[:bob_private_key], c, state[:secret_msg])
     end
   end
 
