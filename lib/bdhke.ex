@@ -158,8 +158,16 @@ defmodule Cashu.BDHKE do
 
   def hash_pubkeys(pubkeys) when is_list(pubkeys) do
     pubkeys
-    |> Enum.map(&Point.serialize_public_key(&1))
+    |> Enum.map(&serialize_uncompressed_public_key/1)
     |> Enum.join()
     |> sha256_hash()
+  end
+
+  def serialize_uncompressed_public_key(%Point{x: x, y: y}) do
+    encoded_x = Bitcoinex.Utils.pad(:binary.encode_unsigned(x), 32, :leading)
+    encoded_y = Bitcoinex.Utils.pad(:binary.encode_unsigned(y), 32, :leading)
+
+    (<<4>> <> encoded_x <> encoded_y)
+    |> Base.encode16(case: :lower)
   end
 end
