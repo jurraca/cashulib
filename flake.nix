@@ -12,11 +12,11 @@
         pkgs = import nixpkgs { inherit system ; };
         beamPackages = pkgs.beam.packagesWith pkgs.beam.interpreters.erlang_27;
         elixir = beamPackages.elixir_1_16;
-        devShell = import ./shell.nix { inherit pkgs beamPackages; };
+        devShell = import ./nix/shell.nix { inherit pkgs beamPackages; };
 
         cashex = let
             lib = pkgs.lib;
-            mixNixDeps = import ./deps.nix {inherit lib beamPackages;};
+            mixNixDeps = import ./nix/deps.nix {inherit lib beamPackages;};
           in beamPackages.mixRelease {
             pname = "cashex";
             src = ./.;
