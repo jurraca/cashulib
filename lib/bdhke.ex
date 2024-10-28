@@ -44,7 +44,15 @@ defmodule Cashu.BDHKE do
     blind_point(secret_msg, blinding_factor)
   end
 
-  def blind_point(secret_msg, blinding_factor) do
+  def blind_point(secret_msg, blinding_factor)
+      when is_binary(secret_msg) and is_binary(blinding_factor) do
+    secret_msg = Base.decode16!(secret_msg, case: :lower)
+
+    {:ok, blinding_factor} = blinding_factor |> String.to_integer(16) |> PrivateKey.new()
+    blind_point(secret_msg, blinding_factor)
+  end
+
+  def blind_point(secret_msg, %PrivateKey{} = blinding_factor) when is_binary(secret_msg) do
     case hash_to_curve(secret_msg) do
       {:ok, point} ->
         blinding_point = PrivateKey.to_point(blinding_factor)
@@ -61,7 +69,13 @@ defmodule Cashu.BDHKE do
   to sign this blinded point. Effectively "committing" to this blinded point.
   He returns this signature-on-blinded-point "c_" .
   """
-  def sign_blinded_point(b_point, a_privkey) do
+  def sign_blinded_point(b_, mint_privkey) when is_binary(b_) and is_binary(mint_privkey) do
+    {:ok, b_point} = Point.parse_public_key(b_)
+    {:ok, mint_privkey} = mint_privkey |> String.to_integer(16) |> PrivateKey.new()
+    sign_blinded_point(b_point, mint_privkey)
+  end
+
+  def sign_blinded_point(%Point{} = b_point, %PrivateKey{} = a_privkey) do
     c_ = Math.multiply(b_point, a_privkey.d)
 
     {:ok, e, s} = mint_create_dleq(b_point, a_privkey)
