@@ -31,7 +31,7 @@ defmodule Cashu.Serializer.JSON do
   def deserialize(<<"cashu", _version::binary-size(1), token::binary>>) do
     # if(version != "A", do: Logger.info("Got cashu token version #{version}"))
     case Base.url_decode64(token, padding: false) do
-      {:ok, json_str} -> {:ok, deserialize(json_str, %TokenV3{})}
+      {:ok, json_str} -> deserialize(json_str, %TokenV3{})
       :error -> {:error, "could not decode token from binary #{token}"}
     end
   end
@@ -46,6 +46,6 @@ defmodule Cashu.Serializer.JSON do
     end
   end
 
-  defp to_struct(data, nil), do: data
-  defp to_struct(data, struct), do: struct(struct, data)
+  defp to_struct(data, nil), do: {:ok, data}
+  defp to_struct(data, struct), do: {:ok, struct(struct, data)}
 end
