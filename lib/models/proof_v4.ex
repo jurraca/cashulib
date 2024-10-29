@@ -36,4 +36,13 @@ defmodule Cashu.ProofV4 do
   def validate(%{valid?: false}), do: {:error, :invalid_proof}
 
   def validate_proof_list(list), do: Validator.validate_list(list, &validate/1)
+
+  def from_cbor_serialized_map(%{"a" => amount, "i" => keyset_id, "s" => secret, "c" => signature}) do
+    new(
+      amount: amount,
+      keyset_id: :binary.encode_hex(keyset_id, :lowercase),
+      secret: secret,
+      signature: :binary.encode_hex(signature, :lowercase)
+    )
+  end
 end

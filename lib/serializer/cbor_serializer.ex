@@ -6,6 +6,7 @@ defmodule Cashu.Serializer.V4 do
   @v4_prefix "cashuB"
   @behaviour Cashu.Serializer
 
+  alias Cashu.ProofV4
   alias Cashu.TokenV4, as: Token
 
   @impl true
@@ -16,14 +17,6 @@ defmodule Cashu.Serializer.V4 do
       |> format_v4(include_witness)
       |> format_cbor_output()
     }
-  end
-
-  @impl true
-  def deserialize(<<"cashuB", token::binary>>) do
-    case Base.url_decode64(token, padding: false) do
-      {:ok, json_str} -> decode_cbor(json_str)
-      :error -> {:error, "could not decode token from binary: #{token}"}
-    end
   end
 
   defp format_v4(token, include_witness) do
@@ -40,11 +33,15 @@ defmodule Cashu.Serializer.V4 do
 
     Enum.map(by_keyset, fn {keyset_id, proofs} ->
       %{
-        i: keyset_id,
+        i: %CBOR.Tag{tag: :bytes, value: :binary.decode_hex(keyset_id)},
         p:
           Enum.map(proofs, fn proof ->
             # TODO: add witness if include_witness is true
-            %{a: proof.amount, s: proof.secret, c: proof.signature}
+            %{
+              a: proof.amount,
+              s: proof.secret,
+              c: %CBOR.Tag{tag: :bytes, value: :binary.decode_hex(proof.signature)}
+            }
           end)
       }
     end)
@@ -55,11 +52,21 @@ defmodule Cashu.Serializer.V4 do
     @v4_prefix <> b64_str
   end
 
+  @impl true
+  def deserialize(<<"cashuB", token::binary>>) do
+    case Base.url_decode64(token, padding: false) do
+      {:ok, cbor_bytes} -> decode_cbor(cbor_bytes)
+      :error -> {:error, "could not decode token from binary: #{token}"}
+    end
+  end
+
   defp decode_cbor(str) do
     case CBOR.decode(str) do
       {:ok, output, ""} ->
-        new_out = Map.update!(output, "t", &handle_cbor_tags(&1))
-        {:ok, new_out}
+        {:ok,
+         output
+         |> Map.update!("t", &handle_cbor_tags(&1))
+         |> to_v4_token()}
 
       {:error, reason} ->
         {:error, reason}
@@ -81,4 +88,23 @@ defmodule Cashu.Serializer.V4 do
 
   defp maybe_handle_tag(%CBOR.Tag{} = data), do: data.value
   defp maybe_handle_tag(data), do: data
+
+  defp to_v4_token(map) do
+    %Token{
+      mint: map["m"],
+      unit: map["u"],
+      memo: map["d"],
+      token: parse_tokens(map["t"])
+    }
+  end
+
+  defp parse_tokens(tokens) do
+    Enum.flat_map(tokens, &parse_proofs(&1))
+  end
+
+  defp parse_proofs(proof) do
+    proof["p"]
+    |> Enum.map(&Map.put(&1, "i", proof["i"]))
+    |> Enum.map(&ProofV4.from_cbor_serialized_map(&1))
+  end
 end

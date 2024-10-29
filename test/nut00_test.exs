@@ -144,32 +144,103 @@ defmodule BDHKETest do
   end
 
   describe "token V4" do
-    # FIXME this test is still broken
-    test "serializes single keyset" do
-      token =
+    test "deserialize single keyset" do
+      serialized =
+        "cashuBpGF0gaJhaUgArSaMTR9YJmFwgaNhYQFhc3hAOWE2ZGJiODQ3YmQyMzJiYTc2ZGIwZGYxOTcyMTZiMjlkM2I4Y2MxNDU1M2NkMjc4MjdmYzFjYzk0MmZlZGI0ZWFjWCEDhhhUP_trhpXfStS6vN6So0qWvc2X3O4NfM-Y1HISZ5JhZGlUaGFuayB5b3VhbXVodHRwOi8vbG9jYWxob3N0OjMzMzhhdWNzYXQ="
+
+      assert {:ok,
+              %TokenV4{
+                mint: "http://localhost:3338",
+                unit: "sat",
+                memo: "Thank you",
+                token: [
+                  %ProofV4{
+                    keyset_id: "00ad268c4d1f5826",
+                    amount: 1,
+                    secret: "9a6dbb847bd232ba76db0df197216b29d3b8cc14553cd27827fc1cc942fedb4e",
+                    signature:
+                      "038618543ffb6b8695df4ad4babcde92a34a96bdcd97dcee0d7ccf98d472126792"
+                  }
+                ]
+              }} = Cashu.Serializer.V4.deserialize(serialized)
+    end
+
+    test "serializes and deserializes single keyset" do
+      %ProofV4{
+        keyset_id: keyset_id,
+        amount: amount,
+        secret: secret,
+        signature: signature
+      } =
+        proofv4 = %ProofV4{
+          keyset_id: "00ad268c4d1f5826",
+          amount: 1,
+          secret: "9a6dbb847bd232ba76db0df197216b29d3b8cc14553cd27827fc1cc942fedb4e",
+          signature: "038618543ffb6b8695df4ad4babcde92a34a96bdcd97dcee0d7ccf98d472126792"
+        }
+
+      %TokenV4{mint: mint, unit: unit, memo: memo} =
+        token =
         TokenV4.new(
-          [
-            %ProofV4{
-              keyset_id: :binary.decode_hex("00ad268c4d1f5826"),
-              amount: 1,
-              secret: "9a6dbb847bd232ba76db0df197216b29d3b8cc14553cd27827fc1cc942fedb4e",
-              signature:
-                :binary.decode_hex(
-                  "038618543ffb6b8695df4ad4babcde92a34a96bdcd97dcee0d7ccf98d472126792"
-                )
-            }
-          ],
-          "https://localhost:3338",
+          [proofv4],
+          "http://localhost:3338",
           "sat",
           "Thank you"
         )
 
       {:ok, serialized} = Cashu.Serializer.V4.serialize(token)
+      {:ok, deserialized} = Cashu.Serializer.V4.deserialize(serialized)
 
-      dbg(serialized)
+      assert %TokenV4{
+               mint: ^mint,
+               unit: ^unit,
+               memo: ^memo,
+               token: [
+                 %ProofV4{
+                   keyset_id: ^keyset_id,
+                   amount: ^amount,
+                   secret: ^secret,
+                   signature: ^signature
+                 }
+               ]
+             } = deserialized
+    end
 
-      assert serialized ==
-               "cashuBpGF0gaJhaUgArSaMTR9YJmFwgaNhYQFhc3hAOWE2ZGJiODQ3YmQyMzJiYTc2ZGIwZGYxOTcyMTZiMjlkM2I4Y2MxNDU1M2NkMjc4MjdmYzFjYzk0MmZlZGI0ZWFjWCEDhhhUP_trhpXfStS6vN6So0qWvc2X3O4NfM"
+    test "deserialize with multiple proofs" do
+      serialized =
+        "cashuBo2F0gqJhaUgA_9SLj17PgGFwgaNhYQFhc3hAYWNjMTI0MzVlN2I4NDg0YzNjZjE4NTAxNDkyMThhZjkwZjcxNmE1MmJmNGE1ZWQzNDdlNDhlY2MxM2Y3NzM4OGFjWCECRFODGd5IXVW-07KaZCvuWHk3WrnnpiDhHki6SCQh88-iYWlIAK0mjE0fWCZhcIKjYWECYXN4QDEzMjNkM2Q0NzA3YTU4YWQyZTIzYWRhNGU5ZjFmNDlmNWE1YjRhYzdiNzA4ZWIwZDYxZjczOGY0ODMwN2U4ZWVhY1ghAjRWqhENhLSsdHrr2Cw7AFrKUL9Ffr1XN6RBT6w659lNo2FhAWFzeEA1NmJjYmNiYjdjYzY0MDZiM2ZhNWQ1N2QyMTc0ZjRlZmY4YjQ0MDJiMTc2OTI2ZDNhNTdkM2MzZGNiYjU5ZDU3YWNYIQJzEpxXGeWZN5qXSmJjY8MzxWyvwObQGr5G1YCCgHicY2FtdWh0dHA6Ly9sb2NhbGhvc3Q6MzMzOGF1Y3NhdA"
+
+      assert {:ok, token} = Cashu.Serializer.V4.deserialize(serialized)
+
+      assert %TokenV4{
+               unit: "sat",
+               mint: "http://localhost:3338",
+               token: proofs
+             } = token
+
+      [proof1, proof2, proof3] =
+        Enum.sort_by(proofs, fn %ProofV4{keyset_id: id, amount: amount} -> {id, amount} end)
+
+      assert %ProofV4{
+               keyset_id: "00ad268c4d1f5826",
+               amount: 1,
+               secret: "56bcbcbb7cc6406b3fa5d57d2174f4eff8b4402b176926d3a57d3c3dcbb59d57",
+               signature: "0273129c5719e599379a974a626363c333c56cafc0e6d01abe46d5808280789c63"
+             } = proof1
+
+      assert %ProofV4{
+               keyset_id: "00ad268c4d1f5826",
+               amount: 2,
+               secret: "1323d3d4707a58ad2e23ada4e9f1f49f5a5b4ac7b708eb0d61f738f48307e8ee",
+               signature: "023456aa110d84b4ac747aebd82c3b005aca50bf457ebd5737a4414fac3ae7d94d"
+             } = proof2
+
+      assert %ProofV4{
+               keyset_id: "00ffd48b8f5ecf80",
+               amount: 1,
+               secret: "acc12435e7b8484c3cf1850149218af90f716a52bf4a5ed347e48ecc13f77388",
+               signature: "0244538319de485d55bed3b29a642bee5879375ab9e7a620e11e48ba482421f3cf"
+             } = proof3
     end
   end
 end
