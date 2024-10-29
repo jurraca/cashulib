@@ -9,13 +9,13 @@ defmodule Cashu.Serializer.V4 do
   alias Cashu.TokenV4, as: Token
 
   @impl true
-  def serialize(%Token{} = token) do
-    case token
-         |> format_v4()
-         |> Jason.encode() do
-      {:ok, json_str} -> {:ok, format_cbor_output(json_str)}
-      {:error, reason} -> {:error, reason}
-    end
+  def serialize(%Token{} = token, include_witness \\ false) do
+    {
+      :ok,
+      token
+      |> format_v4(include_witness)
+      |> format_cbor_output()
+    }
   end
 
   @impl true
@@ -26,20 +26,26 @@ defmodule Cashu.Serializer.V4 do
     end
   end
 
-  defp format_v4(token) do
+  defp format_v4(token, include_witness) do
     %{
       m: token.mint,
       u: token.unit,
       d: token.memo,
-      t: format_v4_proofs(token.token)
+      t: format_v4_proofs(token.token, include_witness)
     }
   end
 
-  defp format_v4_proofs(proofs) when is_list(proofs) do
-    Enum.map(proofs, fn proof ->
+  defp format_v4_proofs(proofs, include_witness) when is_list(proofs) do
+    by_keyset = Enum.group_by(proofs, & &1.keyset_id)
+
+    Enum.map(by_keyset, fn {keyset_id, proofs} ->
       %{
-        i: proof.keyset_id,
-        p: %{a: proof.amount, s: proof.secret, c: proof.signature, w: proof.witness}
+        i: keyset_id,
+        p:
+          Enum.map(proofs, fn proof ->
+            # TODO: add witness if include_witness is true
+            %{a: proof.amount, s: proof.secret, c: proof.signature}
+          end)
       }
     end)
   end

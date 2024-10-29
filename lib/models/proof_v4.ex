@@ -10,12 +10,12 @@ defmodule Cashu.ProofV4 do
   defstruct keyset_id: "", amount: 0, secret: "", signature: "", witness: nil, dleq_proof: nil
 
   @type t :: %{
-    id: String.t(),
-    amount: pos_integer(),
-    secret: String.t(),
-    signature: String.t(),
-    dleq_proof: list(Cashu.DLEQ.t())
-  }
+          id: String.t(),
+          amount: pos_integer(),
+          secret: String.t(),
+          signature: String.t(),
+          dleq_proof: list(Cashu.DLEQ.t())
+        }
 
   def new(), do: %__MODULE__{}
   def new(params) when is_list(params), do: struct!(__MODULE__, params)

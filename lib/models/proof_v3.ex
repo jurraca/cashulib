@@ -6,15 +6,14 @@ defmodule Cashu.ProofV3 do
   alias Cashu.{BDHKE, Error, Validator}
   alias Bitcoinex.Secp256k1.Point
 
-  @derive Jason.Encoder
   defstruct id: "", amount: 0, secret: "", c: ""
 
   @type t :: %{
-    id: String.t(),
-    amount: pos_integer(),
-    secret: String.t(),
-    c: String.t()
-  }
+          id: String.t(),
+          amount: pos_integer(),
+          secret: String.t(),
+          c: String.t()
+        }
 
   def new(), do: %__MODULE__{}
   def new(params) when is_list(params), do: struct!(__MODULE__, params)
@@ -31,7 +30,21 @@ defmodule Cashu.ProofV3 do
     end
   end
 
- def validate(_), do: {:ok, nil}
+  def validate(_), do: {:ok, nil}
 
- def validate_proof_list(list), do: Validator.validate_list(list, &validate/1)
+  def validate_proof_list(list), do: Validator.validate_list(list, &validate/1)
+end
+
+defimpl Jason.Encoder, for: Cashu.ProofV3 do
+  def encode(struct, opts) do
+    Jason.Encode.keyword(
+      [
+        amount: struct.amount,
+        id: struct.id,
+        secret: struct.secret,
+        C: struct.c
+      ],
+      opts
+    )
+  end
 end
