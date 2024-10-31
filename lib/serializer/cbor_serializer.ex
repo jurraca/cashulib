@@ -102,9 +102,7 @@ defmodule Cashu.Serializer.V4 do
     Enum.flat_map(tokens, &parse_proofs(&1))
   end
 
-  defp parse_proofs(proof) do
-    proof["p"]
-    |> Enum.map(&Map.put(&1, "i", proof["i"]))
-    |> Enum.map(&ProofV4.from_cbor_serialized_map(&1))
+  defp parse_proofs(%{"i" => i, "p" => p}) do
+    Enum.map(p, &(&1 |> Map.put("i", i) |> ProofV4.from_cbor_serialized_map()))
   end
 end

@@ -144,7 +144,7 @@ defmodule BDHKETest do
   end
 
   describe "token V4" do
-    test "deserialize single keyset" do
+    test "deserialize single token" do
       serialized =
         "cashuBpGF0gaJhaUgArSaMTR9YJmFwgaNhYQFhc3hAOWE2ZGJiODQ3YmQyMzJiYTc2ZGIwZGYxOTcyMTZiMjlkM2I4Y2MxNDU1M2NkMjc4MjdmYzFjYzk0MmZlZGI0ZWFjWCEDhhhUP_trhpXfStS6vN6So0qWvc2X3O4NfM-Y1HISZ5JhZGlUaGFuayB5b3VhbXVodHRwOi8vbG9jYWxob3N0OjMzMzhhdWNzYXQ="
 
@@ -165,22 +165,15 @@ defmodule BDHKETest do
               }} = Cashu.Serializer.V4.deserialize(serialized)
     end
 
-    test "serializes and deserializes single keyset" do
-      %ProofV4{
-        keyset_id: keyset_id,
-        amount: amount,
-        secret: secret,
-        signature: signature
-      } =
-        proofv4 = %ProofV4{
-          keyset_id: "00ad268c4d1f5826",
-          amount: 1,
-          secret: "9a6dbb847bd232ba76db0df197216b29d3b8cc14553cd27827fc1cc942fedb4e",
-          signature: "038618543ffb6b8695df4ad4babcde92a34a96bdcd97dcee0d7ccf98d472126792"
-        }
+    test "serializes and deserializes single token" do
+      proofv4 = %ProofV4{
+        keyset_id: "00ad268c4d1f5826",
+        amount: 1,
+        secret: "9a6dbb847bd232ba76db0df197216b29d3b8cc14553cd27827fc1cc942fedb4e",
+        signature: "038618543ffb6b8695df4ad4babcde92a34a96bdcd97dcee0d7ccf98d472126792"
+      }
 
-      %TokenV4{mint: mint, unit: unit, memo: memo} =
-        token =
+      token =
         TokenV4.new(
           [proofv4],
           "http://localhost:3338",
@@ -188,22 +181,8 @@ defmodule BDHKETest do
           "Thank you"
         )
 
-      {:ok, serialized} = Cashu.Serializer.V4.serialize(token)
-      {:ok, deserialized} = Cashu.Serializer.V4.deserialize(serialized)
-
-      assert %TokenV4{
-               mint: ^mint,
-               unit: ^unit,
-               memo: ^memo,
-               token: [
-                 %ProofV4{
-                   keyset_id: ^keyset_id,
-                   amount: ^amount,
-                   secret: ^secret,
-                   signature: ^signature
-                 }
-               ]
-             } = deserialized
+      assert {:ok, serialized} = Cashu.Serializer.V4.serialize(token)
+      assert {:ok, ^token} = Cashu.Serializer.V4.deserialize(serialized)
     end
 
     test "deserialize with multiple proofs" do
