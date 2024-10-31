@@ -80,6 +80,15 @@ defmodule Cashu.Keyset do
     id == derive_keyset_id(keys)
   end
 
+  def valid_key?(key) when is_binary(key) do
+    case Validator.validate_key_len(key) do
+      {:ok, _} -> true
+      {:error, _} -> false
+    end
+  end
+
+  def valid_key?(_), do: false
+
   def validate(%{id: id, unit: unit, active: active} = keyset) do
     with true <- is_boolean(active),
          {:ok, _} <- Validator.validate_unit(unit),

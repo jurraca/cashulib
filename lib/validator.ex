@@ -30,6 +30,32 @@ defmodule Cashu.Validator do
   def validate_memo(memo) when is_binary(memo), do: {:ok, memo}
   def validate_memo(_), do: {:error, "Invalid memo: not a string"}
 
+  def validate_key_len(key) when byte_size(key) > 33 do
+    if String.valid?(key) do
+      case Base.decode16(key, case: :lower) do
+        {:ok, bytes} -> validate_key_prefix(bytes)
+        :error -> {:error, :invalid_key}
+      end
+    end
+  end
+
+  def validate_key_len(<<4::8, _::binary>>), do: {:error, :uncompressed_key}
+
+  def validate_key_len(<<prefix::8, rest::binary>> = key) when byte_size(rest) == 32 do
+    if prefix in [2, 3] do
+      {:ok, key}
+    else
+      {:error, :invalid_key}
+    end
+  end
+
+  def validate_key_len(_), do: {:error, :invalid_key}
+
+  defp validate_key_prefix(<<2, rest::binary>> = key) when byte_size(rest) == 32, do: {:ok, key}
+  defp validate_key_prefix(<<3, rest::binary>> = key) when byte_size(rest) == 32, do: {:ok, key}
+  defp validate_key_prefix(<<4, rest::binary>>) when byte_size(rest) == 64, do: {:error, :uncompressed_key}
+  defp validate_key_prefix(_), do: {:error, :invalid_key}
+
   def validate_url(mint_url) do
     case URI.parse(mint_url) do
       %URI{host: nil} -> {:error, "invalid mint URL"}
