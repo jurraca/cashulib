@@ -7,14 +7,13 @@ defmodule Cashu.TokenV3 do
   import Validator
   require Logger
 
-  @derive Jason.Encoder
-  defstruct unit: nil, memo: nil, token: []
+  defstruct token: [], unit: nil, memo: nil
 
   @type t :: %{
-    unit: String.t(),
-    memo: String.t(),
-    token: list(ProofV3.t())
-  }
+          token: list(ProofV3.t()),
+          unit: String.t(),
+          memo: String.t()
+        }
 
   @doc """
   Create a new Cashu.Token struct from a list of Proofs, a unit, and optional memo.
@@ -81,5 +80,18 @@ defmodule Cashu.TokenV3 do
   defp collect_token_validations([head | tail], acc) do
     new_acc = Validator.collect_results(head, acc)
     collect_token_validations(tail, new_acc)
+  end
+end
+
+defimpl Jason.Encoder, for: Cashu.TokenV3 do
+  def encode(struct, opts) do
+    Jason.Encode.keyword(
+      [
+        token: struct.token,
+        unit: struct.unit,
+        memo: struct.memo
+      ],
+      opts
+    )
   end
 end

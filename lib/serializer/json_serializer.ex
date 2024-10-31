@@ -46,6 +46,6 @@ defmodule Cashu.Serializer.JSON do
     end
   end
 
-  defp to_struct(data, nil), do: data
-  defp to_struct(data, struct), do: struct(struct, data)
+  defp to_struct(data, nil), do: {:ok, data}
+  defp to_struct(data, struct), do: {:ok, struct(struct, data)}
 end

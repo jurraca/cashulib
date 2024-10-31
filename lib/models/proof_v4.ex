@@ -10,12 +10,12 @@ defmodule Cashu.ProofV4 do
   defstruct keyset_id: "", amount: 0, secret: "", signature: "", witness: nil, dleq_proof: nil
 
   @type t :: %{
-    id: String.t(),
-    amount: pos_integer(),
-    secret: String.t(),
-    signature: String.t(),
-    dleq_proof: list(Cashu.DLEQ.t())
-  }
+          id: String.t(),
+          amount: pos_integer(),
+          secret: String.t(),
+          signature: String.t(),
+          dleq_proof: list(Cashu.DLEQ.t())
+        }
 
   def new(), do: %__MODULE__{}
   def new(params) when is_list(params), do: struct!(__MODULE__, params)
@@ -36,4 +36,13 @@ defmodule Cashu.ProofV4 do
   def validate(%{valid?: false}), do: {:error, :invalid_proof}
 
   def validate_proof_list(list), do: Validator.validate_list(list, &validate/1)
+
+  def from_cbor_serialized_map(%{"a" => amount, "i" => keyset_id, "s" => secret, "c" => signature}) do
+    new(
+      amount: amount,
+      keyset_id: :binary.encode_hex(keyset_id, :lowercase),
+      secret: secret,
+      signature: :binary.encode_hex(signature, :lowercase)
+    )
+  end
 end
