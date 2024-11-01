@@ -65,13 +65,13 @@ defmodule Cashu.Keyset do
     pubkey_concat =
       keys
       |> sort_keys()
-      |> Map.values()
+      |> Enum.map(fn {_k, v} -> Base.decode16!(v, case: :lower) end)
       |> Enum.join()
 
     id =
       :crypto.hash(:sha256, pubkey_concat)
       |> Base.encode16(case: :lower)
-      |> String.slice(0..14)
+      |> String.slice(0..13)
 
     @keyset_version <> id
   end
@@ -124,7 +124,7 @@ defmodule Cashu.Keyset do
 
   defp sort_keys(keys) do
     keys
-    |> Enum.sort(&(String.to_integer(elem(&1, 0)) < String.to_integer(elem(&2, 0))))
-    |> Enum.into(%{})
+    |> Enum.map(fn {k, v} -> {String.to_integer(k), v} end)
+    |> Enum.sort(&(elem(&1, 0)) < elem(&2, 0))
   end
 end
