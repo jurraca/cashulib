@@ -19,16 +19,20 @@ defmodule Cashu.Keyset do
           id: String.t(),
           active: boolean(),
           unit: String.t(),
+          input_fee_ppk: pos_integer(),
           keys: mint_pubkeys()
         }
 
   def new(), do: %__MODULE__{}
 
-  def new(keys, unit) when is_map(keys) and is_binary(unit) do
+  def new(params), do: struct!(%__MODULE__{}, params)
+
+  def new(keys, unit, active) when is_map(keys) and is_binary(unit) do
     with id <- derive_keyset_id(keys) do
       %__MODULE__{
         id: id,
         unit: unit,
+        active: active,
         keys: keys
       }
     end
@@ -57,10 +61,6 @@ defmodule Cashu.Keyset do
     Map.drop(keys, [denomination])
   end
 
-  def get_keys_response(keysets) do
-    %{keysets: keysets} |> Jason.encode()
-  end
-
   def derive_keyset_id(keys) when is_map(keys) do
     pubkey_concat =
       keys
@@ -80,6 +80,17 @@ defmodule Cashu.Keyset do
     id == derive_keyset_id(keys)
   end
 
+  @doc """
+  Check that the denominations and pubkeys for a keys map are correctly formatted.
+  """
+  def valid_keys?(keys) do
+    keys
+    |> Enum.map(fn {denomination, pubkey} ->
+     valid_denom?(denomination) && valid_key?(pubkey)
+    end)
+    |> Enum.all?
+  end
+
   def valid_key?(key) when is_binary(key) do
     case Validator.validate_key_len(key) do
       {:ok, _} -> true
@@ -88,6 +99,18 @@ defmodule Cashu.Keyset do
   end
 
   def valid_key?(_), do: false
+
+  def valid_denom?(denomination) when is_atom(denomination) do
+    Atom.to_string(denomination) |> valid_denom?()
+  end
+
+  def valid_denom?(denomination) when is_binary(denomination) do
+      try do
+        String.to_integer(denomination) && true
+      rescue
+        ArgumentError -> false
+      end
+  end
 
   def validate(%{id: id, unit: unit, active: active} = keyset) do
     with true <- is_boolean(active),
