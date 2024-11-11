@@ -19,7 +19,6 @@ defmodule Cashu.Keyset do
           id: String.t(),
           active: boolean(),
           unit: String.t(),
-          input_fee_ppk: pos_integer(),
           keys: mint_pubkeys()
         }
 

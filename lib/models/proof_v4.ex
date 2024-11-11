@@ -9,8 +9,9 @@ defmodule Cashu.ProofV4 do
   @derive Jason.Encoder
   defstruct keyset_id: "", amount: 0, secret: "", signature: "", witness: nil, dleq_proof: nil
 
+  # FIXME bad typing
   @type t :: %{
-          id: String.t(),
+          keyset_id: String.t(),
           amount: pos_integer(),
           secret: String.t(),
           signature: String.t(),
@@ -25,7 +26,7 @@ defmodule Cashu.ProofV4 do
     case BDHKE.generate_proof(c_, secret, mint_pubkey) do
       {:ok, %Point{} = c} ->
         hex_c = Point.serialize_public_key(c)
-        new(amount: amount, id: keyset_id, secret: secret, C: hex_c)
+        new(amount: amount, keyset_id: keyset_id, secret: secret, signature: hex_c)
 
       {:error, reason} ->
         Error.new(reason)

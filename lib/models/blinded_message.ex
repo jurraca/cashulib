@@ -6,7 +6,6 @@ defmodule Cashu.BlindedMessage do
   alias Cashu.{BDHKE, Validator}
   alias Bitcoinex.Secp256k1.Point
 
-  @derive Jason.Encoder
   defstruct id: nil, amount: 0, b_prime: nil
 
   @type t :: %{
@@ -24,7 +23,7 @@ defmodule Cashu.BlindedMessage do
     case BDHKE.blind_point(secret_message) do
       {:ok, blind_point, _blinding_factor} ->
         hex_point = Point.serialize_public_key(blind_point)
-        new(%{amount: amount, id: keyset_id, b_: hex_point})
+        new(%{amount: amount, id: keyset_id, b_prime: hex_point})
 
       {:error, _reason} ->
         {:error, "Blind point error"}
@@ -44,4 +43,17 @@ defmodule Cashu.BlindedMessage do
   end
 
   def validate_bm_list(list), do: Validator.validate_list(list, &validate/1)
+end
+
+defimpl Jason.Encoder, for: Cashu.BlindedMessage do
+  def encode(struct, opts) do
+    Jason.Encode.keyword(
+      [
+        amount: struct.amount,
+        id: struct.id,
+        "B_": struct.b_prime
+      ],
+      opts
+    )
+  end
 end

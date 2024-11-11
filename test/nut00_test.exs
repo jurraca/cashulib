@@ -44,7 +44,10 @@ defmodule BDHKETest do
 
   describe "Blinded messages" do
     test "test case 01" do
-      x = "d341ee4871f1f889041e63cf0d3823c713eea6aff01e80f1719f08f9e5be98f6"
+      x =
+        "d341ee4871f1f889041e63cf0d3823c713eea6aff01e80f1719f08f9e5be98f6"
+        |> Base.decode16!(case: :lower)
+
       r = "99fce58439fc37412ab3468b73db0569322588f62fb3a49182d67e23d877824a"
 
       assert {:ok, point, _} = BDHKE.blind_point(x, r)
@@ -54,13 +57,36 @@ defmodule BDHKETest do
     end
 
     test "test case 02" do
-      x = "f1aaf16c2239746f369572c0784d9dd3d032d952c2d992175873fb58fae31a60"
+      x =
+        "f1aaf16c2239746f369572c0784d9dd3d032d952c2d992175873fb58fae31a60"
+        |> Base.decode16!(case: :lower)
+
       r = "f78476ea7cc9ade20f9e05e58a804cf19533f03ea805ece5fee88c8e2874ba50"
 
       assert {:ok, point, _} = BDHKE.blind_point(x, r)
 
       assert Point.serialize_public_key(point) ==
                "029bdf2d716ee366eddf599ba252786c1033f47e230248a4612a5670ab931f1763"
+    end
+
+    test "test case in nutshell" do
+      x = "test_message"
+      r = "0000000000000000000000000000000000000000000000000000000000000001"
+
+      assert {:ok, point, _} = BDHKE.blind_point(x, r)
+
+      assert Point.serialize_public_key(point) ==
+               "025cc16fe33b953e2ace39653efb3e7a7049711ae1d8a2f7a9108753f1cdea742b"
+    end
+
+    test "test case 03" do
+      x = "b0065e80d7ad2540e85815868287011a767a5f724838d43fc550cdf3b08b30ad"
+      r = "c954f58a9a9ffa11a7cb1cdb4178dad8661a33651a9ee397b682078241826ad4"
+
+      {:ok, point, _} = BDHKE.blind_point(x, r)
+
+      assert Point.serialize_public_key(point) ==
+               "0391127366eddb1e2f6a717374e4b6804fa0fc9fd394780140d0dd9bb3a8121643"
     end
   end
 
@@ -83,6 +109,40 @@ defmodule BDHKETest do
 
       assert Point.serialize_public_key(c_) ==
                "0398bc70ce8184d27ba89834d19f5199c84443c31131e48d3c1214db24247d005d"
+    end
+
+    test "test case in nutshell" do
+      assert {:ok, b_, _} =
+               BDHKE.blind_point(
+                 "test_message",
+                 "0000000000000000000000000000000000000000000000000000000000000001"
+               )
+
+      b_ = Point.serialize_public_key(b_)
+
+      mint_priv_key = "0000000000000000000000000000000000000000000000000000000000000001"
+
+      assert {:ok, c_, _, _} = BDHKE.sign_blinded_point(b_, mint_priv_key)
+
+      assert Point.serialize_public_key(c_) ==
+               "025cc16fe33b953e2ace39653efb3e7a7049711ae1d8a2f7a9108753f1cdea742b"
+    end
+
+    test "test case in 01" do
+      assert {:ok, b_, _} =
+               BDHKE.blind_point(
+                 "17176f1eb2604c283c0c50eb2232fcaee7e11a18431b493c00ef675fbb433a0f",
+                 "b41576276b780b9467a634a02d21e14d0ecec280be82b14444764177030c6d81"
+               )
+
+      b_ = Point.serialize_public_key(b_)
+
+      mint_priv_key = "c792bf68fa82a5002348fa0e58e4dd201f5910231f4e08271924699c9268177a"
+
+      assert {:ok, c_, _, _} = BDHKE.sign_blinded_point(b_, mint_priv_key)
+
+      assert Point.serialize_public_key(c_) ==
+               "02f808cc3ba75657fa591a43fce914297eb993fe7cea34e8b5438c5024d8ad4069"
     end
   end
 

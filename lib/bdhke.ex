@@ -46,8 +46,6 @@ defmodule Cashu.BDHKE do
 
   def blind_point(secret_msg, blinding_factor)
       when is_binary(secret_msg) and is_binary(blinding_factor) do
-    secret_msg = Base.decode16!(secret_msg, case: :lower)
-
     {:ok, blinding_factor} = blinding_factor |> String.to_integer(16) |> PrivateKey.new()
     blind_point(secret_msg, blinding_factor)
   end
@@ -89,7 +87,13 @@ defmodule Cashu.BDHKE do
     By substracting her blinding factor from c_ , she "unblinds" the signature on her secret message.
     This is your ecash token.
   """
-  def generate_proof(c_, r, a_point) do
+  def generate_proof(c_, r, a_point) when is_binary(c_) and is_binary(r) do
+    {:ok, c_} = Point.parse_public_key(c_)
+    r = String.to_integer(r, 16)
+    generate_proof(c_, r, a_point)
+  end
+
+  def generate_proof(%Point{} = c_, r, %Point{} = a_point) do
     case a_point
          |> Math.multiply(r)
          |> negate() do
