@@ -4,7 +4,7 @@ defmodule Cashu do
   """
 
   alias Cashu.Serializer.{JSON, V4}
-  alias Cashu.{BDHKE, BlindedMessage, BlindedSignature, ProofV3, ProofV4, TokenV3, TokenV4}
+  alias Cashu.{BlindedMessage, BlindedSignature, ProofV3, ProofV4, TokenV3, TokenV4}
   alias Bitcoinex.Secp256k1.Point, as: SecpPoint
 
   @doc """
@@ -31,22 +31,17 @@ defmodule Cashu do
   @doc """
   Create a Blinded Message, aka an output: a point the mint can sign with the desired amount of ecash at the given keyset.
   """
-  def create_output(secret, amount, keyset_id) do
-    case BDHKE.blind_point(secret) do
-       {:ok, blind_point, _blinding_factor} ->
-         b_prime = SecpPoint.serialize_public_key(blind_point)
-         BlindedMessage.new(amount, b_prime, keyset_id)
-       {:error, reason} -> {:error, reason}
-    end
+  def create_output(secret, amount, blinding_factor_hex, keyset_id) do
+    BlindedMessage.new(amount, secret, blinding_factor_hex, keyset_id)
   end
 
   @doc """
   Sign a hex-encoded, user-provided point, aka an output.
   The mint does this traditionally, returning a blinded point C': the ecash token.
   """
-  def sign_output(output, amount, privkey) when is_binary(output) do
+  def sign_output(output, amount, keyset_id, privkey) when is_binary(output) do
     case SecpPoint.parse_public_key(output) do
-      {:ok, blinded_msg} -> BlindedSignature.new(blinded_msg, amount, privkey)
+      {:ok, blinded_msg} -> BlindedSignature.new(blinded_msg, amount, keyset_id, privkey)
       {:error, _} = err -> err
     end
   end
@@ -55,8 +50,9 @@ defmodule Cashu do
   Create a Proof from a secret, a blinded point, and the mint pubkey.
   Provide the amount and keyset_id associated with them.
   """
-  def create_proof(c, secret, mint_pubkey, amount, keyset_id) do
-    ProofV4.new(c, secret, mint_pubkey, amount, keyset_id)
+  def create_proof(c_, blinding_factor, secret, amount, keyset_id, mint_pubkey)
+      when is_binary(mint_pubkey) do
+    ProofV4.new(c_, blinding_factor, secret, amount, keyset_id, mint_pubkey)
   end
 
   def create_proof_v3(c, secret, mint_pubkey, amount, keyset_id) do

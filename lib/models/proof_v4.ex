@@ -22,8 +22,8 @@ defmodule Cashu.ProofV4 do
   def new(params) when is_list(params), do: struct!(__MODULE__, params)
   def new(params) when is_map(params), do: Map.to_list(params) |> new()
 
-  def new(c_, secret, amount, keyset_id, mint_pubkey) do
-    case BDHKE.generate_proof(c_, secret, mint_pubkey) do
+  def new(c_, blinding_factor, secret, amount, keyset_id, mint_pubkey) do
+    case BDHKE.generate_proof(c_, blinding_factor, mint_pubkey) do
       {:ok, %Point{} = c} ->
         hex_c = Point.serialize_public_key(c)
         new(amount: amount, keyset_id: keyset_id, secret: secret, signature: hex_c)

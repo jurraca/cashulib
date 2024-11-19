@@ -19,11 +19,11 @@ defmodule Cashu.BlindedSignature do
   def new(params) when is_list(params), do: struct!(__MODULE__, params)
   def new(params) when is_map(params), do: Map.to_list(params) |> new()
 
-  def new(blinded_message, keyset_id, mint_privkey) do
+  def new(blinded_message, amount, keyset_id, mint_privkey) do
     case BDHKE.sign_blinded_point(blinded_message, mint_privkey) do
       {:ok, commitment_point, _e, _s} ->
         hex_c_ = Point.serialize_public_key(commitment_point)
-        new(%{amount: blinded_message.amount, id: keyset_id, c_: hex_c_})
+        new(%{amount: amount, id: keyset_id, c_prime: hex_c_})
 
       {:error, reason} ->
         {:error, reason}

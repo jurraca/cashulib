@@ -39,14 +39,9 @@ defmodule Cashu.BDHKE do
   If the number (the "blinding factor") doesn't exist we create it.
   She provides Bob with a blinded point.
   """
-  def blind_point(secret_msg) do
-    {:ok, blinding_factor} = random_number() |> PrivateKey.new()
-    blind_point(secret_msg, blinding_factor)
-  end
-
-  def blind_point(secret_msg, blinding_factor)
-      when is_binary(secret_msg) and is_binary(blinding_factor) do
-    {:ok, blinding_factor} = blinding_factor |> String.to_integer(16) |> PrivateKey.new()
+  def blind_point(secret_msg, blinding_factor_hex)
+      when is_binary(secret_msg) and is_binary(blinding_factor_hex) do
+    {:ok, blinding_factor} = blinding_factor_hex |> String.to_integer(16) |> PrivateKey.new()
     blind_point(secret_msg, blinding_factor)
   end
 
@@ -87,13 +82,22 @@ defmodule Cashu.BDHKE do
     By substracting her blinding factor from c_ , she "unblinds" the signature on her secret message.
     This is your ecash token.
   """
-  def generate_proof(c_, r, a_point) when is_binary(c_) and is_binary(r) do
+  def generate_proof(c_, r, mint_pubkey) when is_binary(mint_pubkey) do
+    {:ok, a_point} = Point.parse_public_key(mint_pubkey)
+    generate_proof(c_, r, a_point)
+  end
+
+  def generate_proof(c_, r, a_point) when is_binary(c_) do
     {:ok, c_} = Point.parse_public_key(c_)
+    generate_proof(c_, r, a_point)
+  end
+
+  def generate_proof(c_, r, a_point) when is_binary(r) do
     r = String.to_integer(r, 16)
     generate_proof(c_, r, a_point)
   end
 
-  def generate_proof(%Point{} = c_, r, %Point{} = a_point) do
+  def generate_proof(%Point{} = c_, r, %Point{} = a_point) when is_integer(r) do
     case a_point
          |> Math.multiply(r)
          |> negate() do
